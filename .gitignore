@@ -1,0 +1,6 @@
+.vscode/
+rev03/*
+*.png
+*.csv
+*.pickle
+__pycache__/
