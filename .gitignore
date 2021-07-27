@@ -1,5 +1,6 @@
 .vscode/
-rev03/*
+rev03/
+rev02/
 *.png
 *.csv
 *.pickle
