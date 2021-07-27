@@ -118,7 +118,7 @@ class RingMap:
     cyga_pos = (3993., 298.)
     casa_pos = (3415., 217.)
 
-    def __init__(self, day = None, intercyl = True, median_subtract = False):
+    def __init__(self, day = None, freq = None, intercyl = True, median_subtract = False):
         """
         Initialize the ringmap. Day should be a valid CSD, or None if you just want the template. 
         Median subtraction can be done immediately to remove crosstalk, or later after some 
@@ -131,8 +131,16 @@ class RingMap:
                 self.data = h5py.File(f'{self.data_folder}{self.day}/ringmap_lsd_{day}.h5', 'r')
             else:
                 self.data = h5py.File(f'{self.data_folder}{self.day}/ringmap_intercyl_lsd_{day}.h5', 'r')
-            self.ringmap = np.transpose(self.data['map'][0,0], (0,2,1))
+
+            if freq:
+                self.ringmap = np.transpose(self.data['map'][0,0], (0,2,1))[freq]
+                self.freq_idx = freq
+            else:
+                self.ringmap = np.transpose(self.data['map'][0,0], (0,2,1))
+
             self.title = f"CSD {self.day} Map"
+
+        ## TODO: make template loading more flexible
         else:
             # Otherwise make a template map
             self.day = 0
@@ -158,8 +166,12 @@ class RingMap:
 
         # save a bunch of helpful data from the h5py file
         index_map = self.data['index_map']
-        self.rms = self.data['rms']
-        self.freq = index_map['freq']
+
+        if freq:
+            pass
+        else:
+            self.rms = self.data['rms']
+            self.freq = index_map['freq']
         self.ra = np.array(index_map['ra'])
         self.dec = np.degrees(np.arcsin(np.array([index_map['el'][0],index_map['el'][-1]]))) + ephemeris.CHIMELATITUDE
         
@@ -168,15 +180,14 @@ class RingMap:
             self._timestamp = ephemeris.csd_to_unix(self.day + self.ra / 360.0)
 
             # Note: ~ is logical not
-
-            # times that are NOT daytime
+            # Times that are NOT daytime
             self._daytime_mask = ~flagging.daytime_flag(self._timestamp) 
 
             # Times when the moon is NOT up
             self._moon_mask = ~flagging.transit_flag(planets['moon'], self._timestamp, nsigma=2.0) 
 
-
-    def _get_good_ra(self, freq):
+    # TODO
+    def _get_good_ra(self, freq = None):
         """
         Get the RA indices where the data is nonzero. 
         """
@@ -192,6 +203,7 @@ class RingMap:
         # If this is a template map, all the RAs should be fine
         return np.arange(len(self.ra))
 
+    # TODO
     def get_ra_mask(self, freq):
         """
         Get a numpy array mask for the good RAs.
@@ -204,6 +216,7 @@ class RingMap:
         ra_mask[:, good_ras] = False
         return ra_mask
 
+    # TODO
     def get_masked_map(self, freq, median_subtract = False):
         """
         Get a RA masked frequency slice of the Ringmap. 
